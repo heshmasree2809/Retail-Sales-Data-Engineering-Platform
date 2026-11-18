@@ -1,318 +1,219 @@
 # Retail Sales Data Engineering Platform
 
-An end-to-end, event-driven retail sales data engineering platform built on AWS. The project simulates a daily ERP/POS sales-feed workflow and demonstrates ingestion, orchestration, PySpark ETL, data-quality validation, curated analytics storage, SQL analytics, warehouse modeling, and BI reporting.
+An end-to-end AWS data engineering pipeline that automates retail sales ingestion, PySpark ETL processing, data quality validation, incremental data loading, and analytical reporting using AWS services.
 
-## Project Objective
+## Overview
 
-Build a production-style data pipeline that:
+Retail Sales Data Engineering Platform simulates a daily ERP/POS data pipeline that processes retail transaction data and transforms raw CSV files into structured, analytics-ready datasets.
 
-- Ingests a new daily retail sales CSV into Amazon S3.
-- Automatically triggers processing when a new sales file arrives.
-- Orchestrates ETL using AWS Step Functions.
-- Cleans, validates, deduplicates, and enriches data with AWS Glue PySpark.
-- Separates valid and rejected records.
-- Stores curated data as partitioned Parquet files.
-- Catalogs curated data with AWS Glue Data Catalog.
-- Provides serverless SQL analytics using Amazon Athena.
-- Loads curated data into an Amazon Redshift warehouse for dimensional analytics.
-- Supports BI reporting through Amazon QuickSight.
-- Provides failure notification through Amazon SNS.
+The platform uses event-driven ingestion, serverless orchestration, distributed data processing, and partitioned storage to support reliable data processing and business analytics.
 
 ## Architecture
 
 ```text
-                    ERP / POS DAILY SALES FILE
-                              |
-                              | CSV
-                              v
-                    +-------------------+
-                    |   Amazon S3 RAW   |
-                    |   raw/sales/       |
-                    +-------------------+
-                              |
-                         ObjectCreated
-                              |
-                              v
-                    +-------------------+
-                    |    AWS Lambda     |
-                    | S3 Event Trigger  |
-                    +-------------------+
-                              |
-                              v
-                    +-------------------+
-                    | AWS Step Functions|
-                    |  Orchestration     |
-                    +-------------------+
-                              |
-                              v
-                    +-------------------+
-                    |   AWS Glue        |
-                    |   PySpark ETL     |
-                    +-------------------+
-                         /           \
-                        /             \
-                       v               v
-                VALID RECORDS     INVALID RECORDS
-                     |                  |
-                     v                  v
-              S3 CURATED          S3 REJECTED
-               Parquet/Date        CSV/Date
-                     |
-                     v
-             Glue Data Catalog
-                /          \
-               /            \
-              v              v
-          Amazon Athena   Amazon Redshift
-              |                |
-              |                v
-              |          Star Schema
-              |                |
-              +-------+--------+
-                      |
-                      v
-              Amazon QuickSight
-
-           Failure path -> Amazon SNS
+             ERP / POS DATA SOURCES
+                       |
+                       v
+                 Amazon S3
+                  (Raw Layer)
+                       |
+                       v
+                  AWS Lambda
+                 (Event Trigger)
+                       |
+                       v
+                AWS Step Functions
+                 (Orchestration)
+                       |
+                       v
+                   AWS Glue
+                  (PySpark ETL)
+                       |
+                +------+------+
+                |             |
+                v             v
+           Valid Data    Rejected Data
+                |             |
+                v             v
+           S3 Curated     S3 Rejected
+           (Parquet)       (CSV)
+                |
+                v
+          Glue Data Catalog
+                |
+                v
+            Amazon Athena
+             (SQL Analytics)
+                |
+                v
+          Amazon Redshift
+          (Data Warehouse)
+                |
+                v
+          Business Analytics
 ```
 
-## AWS Services
+## Tech Stack
 
-| Service | Purpose |
+| Category | Technologies |
 |---|---|
-| Amazon S3 | Raw, curated, rejected and Athena-result storage |
-| AWS Lambda | S3 event-driven ingestion trigger |
-| AWS Step Functions | Pipeline orchestration |
-| AWS Glue | PySpark ETL and data processing |
-| Glue Data Catalog | Metadata and table/partition cataloging |
-| Amazon Athena | Serverless SQL analytics on curated Parquet |
-| Amazon Redshift Serverless | Data warehouse and dimensional analytics |
-| Amazon QuickSight | BI dashboarding |
-| Amazon SNS | Failure notifications |
-| Amazon CloudWatch | Logs and operational monitoring |
+| Programming | Python, SQL |
+| Data Processing | PySpark, AWS Glue |
+| Cloud Platform | AWS |
+| Storage | Amazon S3 |
+| Orchestration | AWS Step Functions |
+| Serverless Computing | AWS Lambda |
+| Data Catalog | AWS Glue Data Catalog |
+| Query Engine | Amazon Athena |
+| Data Warehouse | Amazon Redshift |
+| Monitoring | Amazon CloudWatch |
+| Notifications | Amazon SNS |
+| Visualization | Amazon QuickSight |
+| Version Control | Git, GitHub |
 
-## S3 Data Layout
+## Key Features
 
-```text
-s3://retail-de-project-project/
-|
-├── raw/
-│   ├── sales/
-│   │   └── sales_YYYY_MM_DD.csv
-│   ├── products/
-│   │   └── products.csv
-│   └── stores/
-│       └── stores.csv
-│
-├── processed/
-│
-├── curated/
-│   └── sales/
-│       └── transaction_date=YYYY-MM-DD/
-│           └── *.parquet
-│
-├── rejected/
-│   └── sales/
-│       └── transaction_date=YYYY-MM-DD/
-│           └── *.csv
-│
-├── scripts/
-│
-└── athena-results/
-```
+- Event-driven data ingestion using Amazon S3 and AWS Lambda.
+- Automated ETL orchestration using AWS Step Functions.
+- Distributed data processing using AWS Glue and PySpark.
+- Data cleaning, transformation, deduplication, and validation.
+- Separation of valid and rejected records.
+- Partitioned Parquet storage for analytical workloads.
+- Metadata management using AWS Glue Data Catalog.
+- Serverless SQL analytics using Amazon Athena.
+- Incremental file-based data processing.
+- Failure handling and pipeline monitoring.
+- Dimensional data modeling for warehouse analytics.
 
-## End-to-End Data Flow
+## Data Pipeline
 
-### 1. Daily ERP File
+### 1. Data Ingestion
 
-A daily sales file is generated with a filename such as:
+Daily retail sales CSV files simulate ERP/POS transaction feeds.
 
-```text
-sales_2026_09_25.csv
-```
+Source datasets include:
 
-### 2. S3 Raw Layer
+- Sales transactions
+- Product master data
+- Store master data
 
-The file is uploaded to:
+New files are uploaded to the Amazon S3 raw layer.
 
-```text
-raw/sales/
-```
+### 2. Event-Driven Processing
 
-### 3. S3 Event
+Amazon S3 ObjectCreated events trigger an AWS Lambda function.
 
-The `ObjectCreated` event triggers:
+Lambda extracts the bucket name and object key and starts the corresponding AWS Step Functions execution.
+
+Deterministic execution names help prevent duplicate workflow executions for the same input file.
+
+### 3. Pipeline Orchestration
+
+AWS Step Functions manages the ETL workflow.
 
 ```text
-retail-s3-ingestion-trigger
+Validate ERP File
+       |
+       v
+Run Glue ETL
+       |
+       v
+Check Curated Crawler
+       |
+       v
+Start Crawler
+       |
+       v
+Wait for Completion
+       |
+       v
+Validate Crawler Status
+       |
+       v
+Pipeline Success
 ```
 
-### 4. Lambda
+Failures are handled through the workflow's notification path using Amazon SNS.
 
-Lambda extracts:
+### 4. PySpark ETL Processing
 
-- Bucket name
-- Object key
-- File name
+AWS Glue processes incoming sales data using PySpark.
 
-and starts:
+Processing operations include:
+
+- Reading sales, product, and store datasets.
+- Schema standardization and data type conversion.
+- Missing-value validation.
+- Duplicate detection.
+- Product and store data enrichment.
+- Revenue and profit calculations.
+- Ingestion metadata generation.
+- Valid and rejected record separation.
+
+### 5. Data Quality Validation
+
+The pipeline implements business-level validation rules.
+
+| Validation | Rule |
+|---|---|
+| Transaction ID | Required |
+| Transaction Date | Valid date |
+| Store ID | Required and valid |
+| Product ID | Required and valid |
+| Quantity | Greater than zero |
+| Unit Price | Greater than zero |
+| Payment Method | UPI, CARD, or CASH |
+| Product Reference | Must exist in product master |
+| Store Reference | Must exist in store master |
+| Duplicate Records | Duplicate transaction IDs identified |
+
+Invalid records are separated from valid records for further investigation.
+
+### 6. Curated Data Storage
+
+Validated records are stored in Amazon S3 using Parquet format.
 
 ```text
-retail-daily-sales-pipeline
+curated/
+    sales/
+        transaction_date=2026-09-25/
+        transaction_date=2026-09-26/
+        transaction_date=2026-09-27/
 ```
 
-The execution name is deterministic, for example:
+Rejected records are stored separately.
 
 ```text
-sales_2026_09_25_csv
+rejected/
+    sales/
+        transaction_date=2026-09-25/
+        transaction_date=2026-09-26/
 ```
 
-This supports duplicate execution protection for the same file.
+Date-based partitioning supports efficient analytical queries.
 
-### 5. Step Functions
+### 7. Data Catalog and SQL Analytics
 
-The workflow passes the exact S3 object key to the Glue job.
+AWS Glue Data Catalog maintains metadata and partition information for curated datasets.
 
-```text
-ValidateERPFile
-      ↓
-RunGlueETL
-      ↓
-CheckCuratedCrawler
-      ↓
-StartCuratedCrawler
-      ↓
-WaitForCrawler
-      ↓
-CheckCrawlerAfterWait
-      ↓
-PipelineSuccess
-```
+Amazon Athena enables SQL-based analysis without requiring dedicated database infrastructure.
 
-Failure path:
+Supported analytical use cases:
 
-```text
-Glue/Crawler Failure
-        ↓
-SNS Notification
-        ↓
-PipelineFailed
-```
-
-### 6. Glue PySpark ETL
-
-The Glue job:
-
-- Reads the daily sales CSV.
-- Reads product master data.
-- Reads store master data.
-- Standardizes columns and data types.
-- Removes duplicate master records.
-- Detects duplicate transaction IDs.
-- Validates business rules.
-- Joins products and stores.
-- Calculates revenue and profit.
-- Adds ingestion metadata.
-- Writes valid records as Parquet.
-- Writes rejected records as CSV.
-
-### 7. Data Quality Rules
-
-The pipeline checks:
-
-- Required transaction ID.
-- Valid transaction date.
-- Required store ID.
-- Required product ID.
-- Quantity greater than zero.
-- Unit price greater than zero.
-- Payment method in `UPI`, `CARD`, or `CASH`.
-- Product exists in the product master.
-- Store exists in the store master.
-- Duplicate transaction IDs.
-
-### 8. Curated Layer
-
-Valid sales records are written as partitioned Parquet:
-
-```text
-curated/sales/transaction_date=YYYY-MM-DD/
-```
-
-Invalid data is written separately:
-
-```text
-rejected/sales/transaction_date=YYYY-MM-DD/
-```
-
-### 9. Glue Data Catalog
-
-The curated crawler updates metadata and partitions for Athena.
-
-### 10. Athena
-
-Athena queries the curated Parquet layer and provides analytics such as:
-
-- Daily sales.
+- Daily and monthly sales analysis.
 - Product performance.
-- Store/state performance.
-- Category performance.
-- Payment-method performance.
-- Customer analysis.
+- Store and regional performance.
+- Category-wise revenue.
+- Payment method analysis.
+- Customer purchase analysis.
 - Revenue and profit analysis.
-- Data-quality checks.
+- Data quality validation.
 
-### 11. Redshift
+## Incremental Data Processing
 
-The warehouse layer uses:
+The pipeline uses incremental file-based ingestion.
 
-```text
-retail_dw
-├── sales_stage_raw
-├── sales_stage
-├── product_stage
-├── store_stage
-├── dim_product
-├── dim_store
-├── dim_date
-├── fact_sales
-└── etl_file_control
-```
-
-The warehouse follows a star-schema approach:
-
-```text
-                 dim_date
-                    |
-                    |
- dim_product ---- fact_sales ---- dim_store
-                    |
-                    |
-              customer_id
-```
-
-Daily curated partitions are loaded into staging and merged into `fact_sales` using `transaction_id` as the business key.
-
-### 12. QuickSight
-
-The BI layer can present:
-
-- Total revenue.
-- Total profit.
-- Transactions.
-- Units sold.
-- Daily revenue trend.
-- Revenue by state.
-- Revenue by category.
-- Top products.
-- Profit by state.
-- Payment methods.
-
-## Incremental Loading
-
-This project uses **incremental file-based ingestion**.
-
-A new daily file is processed independently:
+Each newly uploaded sales file is processed independently.
 
 ```text
 Day 1 -> sales_2026_09_25.csv
@@ -320,176 +221,136 @@ Day 2 -> sales_2026_09_26.csv
 Day 3 -> sales_2026_09_27.csv
 ```
 
-Glue writes daily partitions:
+The ETL process writes individual date-based partitions instead of reprocessing the entire historical dataset.
+
+Manual S3 uploads simulate incoming ERP/POS feeds, while event-driven processing automates the subsequent workflow.
+
+## Data Warehouse Design
+
+The planned Amazon Redshift warehouse follows a dimensional modeling approach.
+
+### Warehouse Tables
 
 ```text
-curated/sales/transaction_date=2026-09-25/
-curated/sales/transaction_date=2026-09-26/
-curated/sales/transaction_date=2026-09-27/
+retail_dw/
+    |
+    |-- sales_stage_raw
+    |-- sales_stage
+    |-- product_stage
+    |-- store_stage
+    |
+    |-- dim_product
+    |-- dim_store
+    |-- dim_date
+    |
+    |-- fact_sales
+    |-- etl_file_control
 ```
 
-Manual S3 upload is used to simulate the ERP system. The pipeline itself is event-driven and processes the newly arrived object key rather than reprocessing the entire historical dataset.
+### Star Schema
 
-The Redshift warehouse uses staging plus `MERGE` to avoid duplicate insertion of previously loaded transactions.
+```text
+             dim_date
+                 |
+                 |
+dim_product -- fact_sales -- dim_store
+                 |
+                 |
+             customer_id
+```
 
-## Data Model
+The warehouse design supports analytical queries through fact and dimension tables.
 
-### Sales Source
+The intended loading process uses staging tables and transaction IDs as business keys to support incremental warehouse updates.
 
-| Column | Description |
+## Monitoring and Failure Handling
+
+| AWS Service | Responsibility |
 |---|---|
-| transaction_id | Sales transaction identifier |
-| transaction_date | Transaction date |
-| store_id | Store identifier |
-| product_id | Product identifier |
-| customer_id | Customer identifier |
-| quantity | Units purchased |
-| unit_price | Selling price per unit |
-| payment_method | Payment method |
+| CloudWatch | Logs and operational monitoring |
+| Step Functions | Workflow execution tracking |
+| AWS Glue | ETL job monitoring |
+| Amazon Athena | Query execution history |
+| Amazon SNS | Failure notifications |
 
-### Product Master
-
-| Column | Description |
-|---|---|
-| product_id | Product identifier |
-| product_name | Product name |
-| category | Product category |
-| brand | Product brand |
-| cost_price | Product cost |
-
-### Store Master
-
-| Column | Description |
-|---|---|
-| store_id | Store identifier |
-| store_name | Store name |
-| city | Store city |
-| state | Store state |
-| region | Store region |
-
-
-## Important Project Files
-
-### Lambda
+## Project Structure
 
 ```text
-lambda/retail_s3_ingestion_trigger.py
+Retail-Sales-Data-Engineering-Platform/
+│
+├── lambda/
+│   └── retail_s3_ingestion_trigger.py
+│
+├── step-functions/
+│   └── retail_daily_sales_pipeline.json
+│
+├── glue/
+│   └── retail_sales_pyspark_etl.py
+│
+├── athena/
+│
+├── redshift/
+│
+├── config/
+│
+├── README.md
+│
+└── .gitignore
 ```
 
-### Step Functions
+## Execution Workflow
 
-```text
-step-functions/retail_daily_sales_pipeline.json
-```
+1. Upload a daily sales CSV file to the Amazon S3 raw directory.
+2. S3 triggers the Lambda ingestion function.
+3. Lambda starts the Step Functions workflow.
+4. Step Functions invokes the AWS Glue ETL job.
+5. Glue processes and validates transaction data.
+6. Valid records are written as partitioned Parquet files.
+7. Invalid records are stored separately.
+8. Glue Crawler updates the Data Catalog.
+9. Athena executes analytical SQL queries.
+10. Verify pipeline execution and data quality through AWS monitoring services.
 
-### Glue
+## Security and Configuration
 
-```text
-glue/retail_sales_pyspark_etl.py
-```
-
-### Athena
-
-```text
-athena/
-```
-
-### Redshift
-
-```text
-redshift/
-```
-
-## Configuration and Secrets
-
-AWS credentials, secret keys, database passwords, tokens, and other sensitive information must never be committed to GitHub.
-
-The configuration files in `config/` use placeholders such as:
-
-```text
-YOUR_STATE_MACHINE_ARN
-YOUR_REDSHIFT_IAM_ROLE_ARN
-YOUR_SNS_TOPIC_ARN
-```
-
-Use AWS IAM roles, Lambda environment variables, Secrets Manager, or other secure configuration mechanisms for deployment-specific values.
-
-## Deployment / Test Flow
-
-1. Upload a new daily ERP CSV to `raw/sales/`.
-2. Verify the S3 ObjectCreated event.
-3. Check Lambda CloudWatch logs.
-4. Open the Step Functions execution.
-5. Verify Glue completes successfully.
-6. Verify curated Parquet is created.
-7. Verify the curated crawler succeeds.
-8. Run Athena validation queries.
-9. Run Redshift staging/load/merge SQL.
-10. Verify warehouse row counts and data-quality checks.
-11. Refresh or query the QuickSight dashboard.
-
-## Monitoring
-
-CloudWatch is used for Lambda and operational logs.
-
-Step Functions provides execution-level workflow status.
-
-Glue provides ETL execution monitoring.
-
-Athena provides query execution history.
-
-Redshift provides warehouse load/query monitoring.
-
-SNS is used for pipeline failure notifications.
-
-## Troubleshooting
-
-### Lambda AccessDenied for Step Functions
-
-Verify that the Lambda execution role has:
-
-```text
-states:StartExecution
-```
-
-on the correct state-machine ARN.
-
-### Glue Cannot Read S3
-
-Verify the Glue IAM role and S3 permissions, source key, and bucket paths.
-
-### Athena Table Is Empty
-
-Verify the Glue crawler, database, table, S3 curated path, and partitions.
-
-### Redshift COPY Fails
-
-Verify the Redshift IAM role, S3 permissions, S3 prefix, Parquet format, and target table schema.
-
-### Duplicate Rows in Redshift
-
-Verify the daily source partition, staging data, `transaction_id`, and `MERGE` condition.
+- AWS credentials and database passwords are excluded from source control.
+- Deployment-specific values are maintained using configuration placeholders.
+- IAM roles provide service-level permissions.
+- Sensitive configuration should be managed through secure AWS services such as Secrets Manager and Lambda environment variables.
 
 ## Project Status
 
-The AWS ingestion, orchestration, ETL, data-quality, curated-storage, Glue Catalog, and Athena portions are implemented and tested in the project workflow.
-
-The Redshift warehouse layer is maintained in the `redshift/` folder and should be marked complete in project documentation only after the Redshift load, merge, and validation steps have been successfully tested.
-
-## Portfolio Highlights
-
-This project demonstrates practical data engineering skills in:
-
-- Event-driven ingestion.
-- AWS serverless orchestration.
-- PySpark ETL.
-- Data-quality engineering.
-- Incremental file ingestion.
-- Partitioned Parquet data lakes.
+**Implemented and tested:**
+- Amazon S3 data ingestion.
+- AWS Lambda event triggering.
+- Step Functions orchestration.
+- AWS Glue PySpark ETL.
+- Data quality validation.
+- Valid and rejected record separation.
+- Partitioned Parquet storage.
 - Glue Data Catalog.
-- Athena SQL analytics.
-- Redshift dimensional modeling and incremental merge.
-- BI reporting.
-- Monitoring and failure handling.
-- Git and GitHub project organization.
+- Amazon Athena analytics.
 
+**Additional implementation and validation:**
+- Amazon Redshift warehouse loading.
+- Staging and incremental MERGE operations.
+- Warehouse-level validation.
+- QuickSight dashboard integration.
+
+## Engineering Concepts Demonstrated
+
+- Event-driven architecture
+- ETL pipeline development
+- Distributed data processing
+- PySpark transformations
+- Data quality engineering
+- Incremental data ingestion
+- Data lake architecture
+- Parquet partitioning
+- SQL analytics
+- Dimensional data modeling
+- Cloud orchestration
+- Pipeline monitoring and failure handling
+
+---
+**Built with Python, PySpark, SQL, and AWS.**
