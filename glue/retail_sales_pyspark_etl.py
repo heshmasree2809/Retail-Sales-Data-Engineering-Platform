@@ -61,7 +61,7 @@ sales_df = (
     .option("header", "true")
     .option("inferSchema", "true")
     .csv(sales_path)
-)
+),
 
 
 # ---------------------------------------------------------
