@@ -29,7 +29,7 @@ def create_execution_name(file_name: str) -> str:
         file_name
     )
 
-    return execution_name[:80]
+    return execution_name[:800]
 
 
 def lambda_handler(event, context):
