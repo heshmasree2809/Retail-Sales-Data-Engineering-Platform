@@ -136,5 +136,5 @@ FROM retail_dw.dim_product;
 SELECT COUNT(*) AS stores
 FROM retail_dw.dim_store;
 
-SELECT COUNT() AS dates
+SELECT COUNT(*) AS dates
 FROM retail_dw.dim_date;
