@@ -105,6 +105,6 @@ def lambda_handler(event, context):
                 raise
 
     return {
-        "statusCode": 200,
+        "statusCode": 20,
         "message": "S3 event processed"
     }
