@@ -47,7 +47,7 @@ GROUP BY
 
 ORDER BY revenue DESC
 
-LIMIT 10;
+LIMIT 100;
 
 
 -- Product profitability
